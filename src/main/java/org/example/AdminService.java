@@ -15,7 +15,7 @@ import java.util.*;
 public class AdminService {
     private final DatabaseService db;
     private final String ADMIN_PASSWORD = "secret123";
-    private final Long ADMIN_ID = 7292882679L;
+    private final Long ADMIN_ID = 5726258449L;
 
     // Admin holatlarini saqlaymiz
     private final Map<Long, Boolean> awaitingBroadcast = new HashMap<>();
