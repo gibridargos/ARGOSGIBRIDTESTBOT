@@ -54,8 +54,18 @@ public class AdvancedTelegramBot extends TelegramLongPollingBot {
                 if (text.equals("/start")) {
                     sendStartWithInlineChannels(chatId);
                 } else if (text.equals("\uD83E\uDDE0 Тест ишлаш")) {
-                    sendWebApp(chatId);
+                    // 1️⃣ Kanalga obuna tekshiruvi
+                    List<String> unsubscribed = getUnsubscribedChannels(chatId);
+
+                    if (unsubscribed.isEmpty()) {
+                        // 2️⃣ Obuna bo‘lgan – testni boshlash tugmasi chiqadi
+                        sendWebAppWithAutoHide(chatId);
+                    } else {
+                        // 3️⃣ Obuna bo‘lmagan – kanal ro‘yxatini ko‘rsatadi
+                        sendUnsubscribedMessage(chatId, unsubscribed);
+                    }
                 }
+
             }
 
             if (update.hasCallbackQuery()) {
@@ -77,6 +87,41 @@ public class AdvancedTelegramBot extends TelegramLongPollingBot {
         }
     }
 
+    private void sendWebAppWithAutoHide(Long chatId) throws Exception {
+        // 1️⃣ WebApp tugmasi chiqadi
+        SendMessage msg = new SendMessage(chatId.toString(),
+                "\uD83C\uDF10 Тестни бошлаш учун қуйидаги тугмани босинг:");
+
+        KeyboardButton webButton = new KeyboardButton("\uD83D\uDCCB Тестни очиш");
+        webButton.setWebApp(new WebAppInfo("https://gibridargos.github.io/gibridargos/"));
+
+        KeyboardRow row = new KeyboardRow();
+        row.add(webButton);
+
+        ReplyKeyboardMarkup markup = new ReplyKeyboardMarkup(List.of(row));
+        markup.setResizeKeyboard(true);
+        markup.setOneTimeKeyboard(false);
+
+        msg.setReplyMarkup(markup);
+        execute(msg);
+
+        // 2️⃣ 2 soniya kutamiz
+        Thread.sleep(5000);
+
+        // 3️⃣ Yana “Тест ишлаш” tugmasini qaytarish
+        KeyboardButton testBtn = new KeyboardButton("\uD83E\uDDE0 Тест ишлаш");
+        KeyboardRow newRow = new KeyboardRow();
+        newRow.add(testBtn);
+
+        ReplyKeyboardMarkup backMarkup = new ReplyKeyboardMarkup(List.of(newRow));
+        backMarkup.setResizeKeyboard(true);
+
+        SendMessage backMsg = new SendMessage(chatId.toString(),
+                "↩️ Тугма вақтинча олиб ташланди. Яна тест ишлаш учун босинг:");
+        backMsg.setReplyMarkup(backMarkup);
+        execute(backMsg);
+    }
+
     private List<String> getUnsubscribedChannels(Long chatId) {
         List<String> notJoined = new ArrayList<>();
         for (String channel : requiredChannels) {
@@ -94,6 +139,41 @@ public class AdvancedTelegramBot extends TelegramLongPollingBot {
         }
         return notJoined;
     }
+
+
+    private void sendUnsubscribedMessage(Long chatId, List<String> unsubscribed) {
+        try {
+            StringBuilder sb = new StringBuilder("\uD83D\uDE43 Сиз канал ёки гуруҳга обуна бўлмагансиз!\n\n");
+            sb.append("\uD83C\uDFAF Қуйидаги тугмалар орқали обуна бўлинг ва яна уриниб кўринг:\n\n");
+
+            Map<String, String> channelNamesMap = new HashMap<>();
+            channelNamesMap.put("@argos_testlarim", "АРГОС ТЕСТЛАРИ КАНАЛИ");
+            channelNamesMap.put("@gibridtest", "ГИБРИД ТЕСТ УАШ КАНАЛИ");
+            channelNamesMap.put("@gibridtesthamshira", "ГИБРИД ТЕСТ ХАМШИРА КАНАЛИ");
+
+            List<List<InlineKeyboardButton>> buttons = new ArrayList<>();
+            for (String ch : unsubscribed) {
+                String displayName = channelNamesMap.getOrDefault(ch, ch);
+                InlineKeyboardButton btn = new InlineKeyboardButton("📢 " + displayName);
+                btn.setUrl("https://t.me/" + ch.substring(1));
+                buttons.add(List.of(btn));
+            }
+
+            sb.append("\n🔄 Обуна бўлгач, қайта текширинг:");
+            InlineKeyboardButton checkBtn = new InlineKeyboardButton("✅ Қайта текшириш");
+            checkBtn.setCallbackData("check_subs");
+            buttons.add(List.of(checkBtn));
+
+            InlineKeyboardMarkup markup = new InlineKeyboardMarkup(buttons);
+
+            SendMessage msg = new SendMessage(chatId.toString(), sb.toString());
+            msg.setReplyMarkup(markup);
+            execute(msg);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+    
 
     private void sendStartWithInlineChannels(Long chatId) throws Exception {
         String text = " \uD83D\uDCAC Ассалому алайкум. Ботимизга хуш келибсиз.\n\n" +
@@ -177,16 +257,29 @@ public class AdvancedTelegramBot extends TelegramLongPollingBot {
 
         execute(msg);
     }
-
+/*
     private void sendWebApp(Long chatId) throws Exception {
-        SendMessage msg = new SendMessage(chatId.toString(), "\uD83C\uDF10 Тестни бошлаш учун қуйидаги тугмани босинг:");
-        InlineKeyboardButton webButton = new InlineKeyboardButton("\uD83D\uDE80 Тестни бошлаш");
+        SendMessage msg = new SendMessage(chatId.toString(),
+                "\uD83C\uDF10 Тестни бошлаш учун қуйидаги тугмани босинг:");
+
+        // 🟢 WebApp ochuvchi Replay tugma yaratamiz
+        KeyboardButton webButton = new KeyboardButton("\uD83D\uDE80 Тестни бошлаш");
         webButton.setWebApp(new WebAppInfo("https://gibridargos.github.io/gibridargos/"));
 
-        InlineKeyboardMarkup markup = new InlineKeyboardMarkup(List.of(List.of(webButton)));
+        // 🧩 Tugmani qatorga joylaymiz
+        KeyboardRow row = new KeyboardRow();
+        row.add(webButton);
+
+        // 🧱 Klaviatura tuzilmasi
+        ReplyKeyboardMarkup markup = new ReplyKeyboardMarkup(List.of(row));
+        markup.setResizeKeyboard(true);
+        markup.setOneTimeKeyboard(false); // foydalanuvchi bosgandan keyin yo‘qolmasin
+
         msg.setReplyMarkup(markup);
+
         execute(msg);
     }
+*/
 
     public void executeSafely(SendMessage message) {
         try { execute(message); } catch (Exception e) { e.printStackTrace(); }
